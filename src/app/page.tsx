@@ -28,6 +28,7 @@ function InterviewModal({
   interviewContext: Omit<HandleObjectionInput, 'objection'>;
 }) {
   const [transcript, setTranscript] = useState('');
+  const [lastProcessedTranscript, setLastProcessedTranscript] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -107,20 +108,17 @@ function InterviewModal({
 
   useEffect(() => {
     const handleKeyDown = async (event: KeyboardEvent) => {
-        if (event.altKey && event.code === 'Space') {
+        if (event.key === 'Alt') {
             event.preventDefault();
             
             const finalTranscript = transcript.trim();
-            if (!finalTranscript) {
-              toast({
-                variant: 'destructive',
-                title: 'Transcript Empty',
-                description: 'No speech detected to generate suggestions from.',
-              });
+            if (!finalTranscript || finalTranscript === lastProcessedTranscript) {
               return;
             }
             
             setIsLoading(true);
+            setLastProcessedTranscript(finalTranscript);
+
             try {
                 const input: HandleObjectionInput = {
                     objection: finalTranscript,
@@ -162,7 +160,7 @@ function InterviewModal({
     return () => {
         window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [transcript, interviewContext, toast]);
+  }, [transcript, interviewContext, toast, lastProcessedTranscript]);
   
   const getIconForType = (type: Suggestion['type']) => {
     switch (type) {
@@ -194,7 +192,7 @@ function InterviewModal({
               <div className="flex justify-between items-center text-left">
                 <div>
                   <DialogTitle className="text-lg font-bold">Interview Assistant</DialogTitle>
-                   <p className="text-xs text-gray-400">Listening... Press Alt+Space to generate suggestions.</p>
+                   <p className="text-xs text-gray-400">Listening... Press Alt to generate suggestions.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <DialogClose asChild>
@@ -228,7 +226,7 @@ function InterviewModal({
                     ))
                 ) : (
                     <div className="text-gray-400 min-h-[100px] flex items-center justify-center text-center px-4">
-                        <p className="text-sm">Suggestions will appear here when you press Alt+Space.</p>
+                        <p className="text-sm">Suggestions will appear here when you press Alt.</p>
                     </div>
                 )}
               </div>
