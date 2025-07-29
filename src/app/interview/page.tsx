@@ -6,8 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Settings, Book, Lightbulb, Zap, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { handleObjection } from '@/ai/flows/handle-objection-flow';
+import { handleObjection, HandleObjectionInput } from '@/ai/flows/handle-objection-flow';
 import { useToast } from "@/hooks/use-toast";
 
 type Suggestion = {
@@ -20,10 +19,26 @@ export default function InterviewPage() {
   const [transcript, setTranscript] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [interviewContext, setInterviewContext] = useState<Omit<HandleObjectionInput, 'objection'>>({
+      roleName: '',
+      jobDescription: '',
+      resume: ''
+  });
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    // Retrieve context from localStorage
+    const storedContext = localStorage.getItem('interviewContext');
+    if (storedContext) {
+        const parsedContext = JSON.parse(storedContext);
+        setInterviewContext({
+            roleName: parsedContext.roleName,
+            jobDescription: parsedContext.jobDescription,
+            resume: parsedContext.resumeContent || parsedContext.resumeUrl
+        });
+    }
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
@@ -79,7 +94,11 @@ export default function InterviewPage() {
       if(isLoading) return;
       setIsLoading(true);
       try {
-          const result = await handleObjection({objection: text});
+          const input: HandleObjectionInput = {
+              objection: text,
+              ...interviewContext
+          };
+          const result = await handleObjection(input);
           const newSuggestions: Suggestion[] = [
               {type: 'rebuttal', content: result.rebuttal},
               {type: 'comparison', content: result.comparison},
@@ -104,9 +123,9 @@ export default function InterviewPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full h-full flex flex-col gap-4">
-        <header className="flex justify-between items-center text-white">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-4xl flex flex-col gap-4">
+        <header className="flex justify-between items-center text-white pt-4">
           <div className="flex flex-col">
             <h1 className="text-2xl font-bold">Live Objection Handling & Battlecards</h1>
             <p className="text-sm text-gray-300">Cluely listens for objections and instantly surfaces the right responses, competitor comparisons, or rebuttals — no tab-switching needed.</p>
@@ -133,8 +152,8 @@ export default function InterviewPage() {
                     </Card>
                 ))
             ) : (
-                <Card className="bg-white/10 border-white/20 text-white h-full flex items-center justify-center">
-                    <p className="text-lg">AI suggestions will appear here...</p>
+                <Card className="bg-white/10 border-white/20 text-white h-full min-h-[120px] flex items-center justify-center">
+                    <p className="text-lg">{isListening ? 'Listening...' : 'AI suggestions will appear here...'}</p>
                 </Card>
             )}
           </div>
@@ -143,7 +162,7 @@ export default function InterviewPage() {
                   <CardHeader>
                       <CardTitle>Live Transcript</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="h-48 overflow-y-auto">
                       <p>{transcript || "Waiting for you to speak..."}</p>
                   </CardContent>
               </Card>

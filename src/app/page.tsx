@@ -1,13 +1,46 @@
 
-import Link from 'next/link';
+"use client";
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowRight } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function OnboardingPage() {
+  const [roleName, setRoleName] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+  const [resumeUrl, setResumeUrl] = useState('');
+  const [resumeContent, setResumeContent] = useState('');
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!roleName || !jobDescription || (!resumeUrl && !resumeContent)) {
+        toast({
+            variant: 'destructive',
+            title: 'Missing Information',
+            description: 'Please fill out the role name, job description, and provide a resume.',
+        });
+        return;
+    }
+    
+    // Store data in localStorage to pass to the interview page
+    localStorage.setItem('interviewContext', JSON.stringify({
+        roleName,
+        jobDescription,
+        resumeUrl,
+        resumeContent
+    }));
+
+    router.push('/interview');
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-2xl">
@@ -18,10 +51,15 @@ export default function OnboardingPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <Label htmlFor="role-name">Role Name</Label>
-              <Input id="role-name" placeholder="e.g., Senior Product Manager" />
+              <Input 
+                id="role-name"
+                placeholder="e.g., Senior Product Manager" 
+                value={roleName}
+                onChange={(e) => setRoleName(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="job-description">Job Description</Label>
@@ -29,11 +67,18 @@ export default function OnboardingPage() {
                 id="job-description"
                 placeholder="Paste the job description here..."
                 className="min-h-[150px]"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="resume-url">Resume URL</Label>
-              <Input id="resume-url" placeholder="https://example.com/my-resume.pdf" />
+              <Input 
+                id="resume-url" 
+                placeholder="https://example.com/my-resume.pdf" 
+                value={resumeUrl}
+                onChange={(e) => setResumeUrl(e.target.value)}
+                />
             </div>
             <div className="space-y-2">
               <Label htmlFor="resume-content">Or Paste Resume Content</Label>
@@ -41,12 +86,12 @@ export default function OnboardingPage() {
                 id="resume-content"
                 placeholder="Paste your resume here..."
                 className="min-h-[200px]"
+                value={resumeContent}
+                onChange={(e) => setResumeContent(e.target.value)}
               />
             </div>
-            <Button className="w-full" asChild>
-              <Link href="/interview">
+            <Button className="w-full" type="submit">
                 Start Interview <ArrowRight className="ml-2" />
-              </Link>
             </Button>
           </form>
         </CardContent>

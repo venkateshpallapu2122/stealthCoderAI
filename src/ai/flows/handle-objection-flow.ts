@@ -1,4 +1,4 @@
-// src/ai/flows/handle-objection-flow.ts
+
 'use server';
 /**
  * @fileOverview A flow to handle objections during an interview and provide suggestions.
@@ -13,6 +13,9 @@ import { z } from 'genkit';
 
 const HandleObjectionInputSchema = z.object({
   objection: z.string().describe('The objection or question raised by the interviewer.'),
+  roleName: z.string().describe("The name of the role the user is interviewing for."),
+  jobDescription: z.string().describe("The job description for the role."),
+  resume: z.string().describe("The user's resume, either as a URL or as text content."),
 });
 export type HandleObjectionInput = z.infer<typeof HandleObjectionInputSchema>;
 
@@ -36,8 +39,13 @@ The user is being interviewed and has just heard the following objection or ques
 
 "{{{objection}}}"
 
+Here is the context for the interview:
+- Role Name: {{{roleName}}}
+- Job Description: {{{jobDescription}}}
+- User's Resume: {{{resume}}}
+
 Based on this, provide:
-1.  A strong, concise rebuttal or response.
+1.  A strong, concise rebuttal or response, keeping the user's resume and the job description in mind.
 2.  A relevant comparison to a competitor product, technology, or approach that highlights the user's strengths.
 3.  An insightful question to ask back to the interviewer to show engagement and turn the conversation.
 `,
