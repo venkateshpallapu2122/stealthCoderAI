@@ -73,6 +73,9 @@ function InterviewModal({
         };
         
         recognitionRef.current.onerror = (event: any) => {
+          if (event.error === 'no-speech') {
+            return; // Ignore no-speech errors, they are not critical.
+          }
           console.error('Speech recognition error', event.error);
           let description = `An unknown error occurred: ${event.error}`;
           if (event.error === 'network') {
