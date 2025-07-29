@@ -63,3 +63,53 @@ const handleObjectionFlow = ai.defineFlow(
 export async function handleObjection(input: HandleObjectionInput): Promise<HandleObjectionOutput> {
   return handleObjectionFlow(input);
 }
+
+
+const HandleObjectionForProductManagerOutputSchema = z.object({
+  rebuttal: z.string().describe('A direct response or rebuttal to the objection.'),
+  comparison: z.string().describe('A relevant comparison to a competitor or alternative.'),
+  questionToAsk: z.string().describe('A clarifying or insightful question to ask back to the interviewer.'),
+  followUpQuestion: z.string().describe('A strategic follow-up question to probe deeper into the topic.'),
+});
+export type HandleObjectionForProductManagerOutput = z.infer<typeof HandleObjectionForProductManagerOutputSchema>;
+
+
+const pmPrompt = ai.definePrompt({
+  name: 'handleObjectionForProductManagerPrompt',
+  input: { schema: HandleObjectionInputSchema },
+  output: { schema: HandleObjectionForProductManagerOutputSchema },
+  prompt: `You are an expert interview co-pilot for a Product Manager. You are listening to an interview and need to provide real-time suggestions.
+The user is being interviewed for a Product Manager role and has just heard the following objection or question:
+
+"{{{objection}}}"
+
+Here is the context for the interview:
+- Role Name: {{{roleName}}}
+- Job Description: {{{jobDescription}}}
+- User's Resume: {{{resume}}}
+
+Based on this, provide:
+1.  A strong, concise rebuttal or response, keeping the user's resume and the job description in mind.
+2.  A relevant comparison to a competitor product, technology, or approach that highlights the user's strengths.
+3.  An insightful question to ask back to the interviewer to show engagement and turn the conversation.
+4.  A strategic follow-up question that the user could ask to demonstrate deep product thinking.
+`,
+});
+
+
+const handleObjectionForProductManagerFlow = ai.defineFlow(
+  {
+    name: 'handleObjectionForProductManagerFlow',
+    inputSchema: HandleObjectionInputSchema,
+    outputSchema: HandleObjectionForProductManagerOutputSchema,
+  },
+  async (input) => {
+    const { output } = await pmPrompt(input);
+    return output!;
+  }
+);
+
+
+export async function handleObjectionForProductManager(input: HandleObjectionInput): Promise<HandleObjectionForProductManagerOutput> {
+    return handleObjectionForProductManagerFlow(input);
+}

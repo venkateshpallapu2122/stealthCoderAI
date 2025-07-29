@@ -7,15 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, Mic, MicOff, Book, Lightbulb, Zap, Bot, ScreenShare, X } from 'lucide-react';
+import { ArrowRight, Mic, MicOff, Book, Lightbulb, Zap, Bot, ScreenShare, X, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { handleObjection, HandleObjectionInput } from '@/ai/flows/handle-objection-flow';
+import { handleObjection, HandleObjectionInput, handleObjectionForProductManager } from '@/ai/flows/handle-objection-flow';
 import { generateCodeAndExplanationFromScreenshot, GenerateCodeAndExplanationFromScreenshotInput } from '@/ai/flows/generate-code-and-explanation-from-screenshot';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Suggestion = {
-  type: 'rebuttal' | 'comparison' | 'question' | 'code' | 'explanation';
+  type: 'rebuttal' | 'comparison' | 'question' | 'code' | 'explanation' | 'followUp';
   content: string;
 };
 
@@ -106,13 +106,28 @@ function InterviewModal({
               objection: text,
               ...interviewContext
           };
-          const result = await handleObjection(input);
-          const newSuggestions: Suggestion[] = [
-              {type: 'rebuttal', content: result.rebuttal},
-              {type: 'comparison', content: result.comparison},
-              {type: 'question', content: result.questionToAsk},
-          ];
-          setSuggestions(newSuggestions);
+
+          const isProductManager = interviewContext.roleName.toLowerCase().includes('product manager');
+          
+          if (isProductManager) {
+            const result = await handleObjectionForProductManager(input);
+            const newSuggestions: Suggestion[] = [
+                {type: 'rebuttal', content: result.rebuttal},
+                {type: 'comparison', content: result.comparison},
+                {type: 'question', content: result.questionToAsk},
+                {type: 'followUp', content: result.followUpQuestion},
+            ];
+            setSuggestions(newSuggestions);
+          } else {
+            const result = await handleObjection(input);
+            const newSuggestions: Suggestion[] = [
+                {type: 'rebuttal', content: result.rebuttal},
+                {type: 'comparison', content: result.comparison},
+                {type: 'question', content: result.questionToAsk},
+            ];
+            setSuggestions(newSuggestions);
+          }
+
       } catch (error) {
           console.error("Error fetching suggestions:", error);
           toast({variant: 'destructive', title: 'AI Error', description: 'Could not fetch suggestions.'});
@@ -169,6 +184,7 @@ function InterviewModal({
       case 'rebuttal': return <Zap className="text-yellow-400" />;
       case 'comparison': return <Book className="text-blue-400" />;
       case 'question': return <Lightbulb className="text-green-400" />;
+      case 'followUp': return <HelpCircle className="text-orange-400" />;
       case 'code': return <Zap className="text-purple-400" />;
       case 'explanation': return <Book className="text-blue-400" />;
       default: return <Bot />;
@@ -180,6 +196,7 @@ function InterviewModal({
       case 'rebuttal': return 'Rebuttal';
       case 'comparison': return 'Comparison';
       case 'question': return 'Question to Ask';
+      case 'followUp': return 'Follow-up Question';
       case 'code': return 'Code Solution';
       case 'explanation': return 'Explanation';
       default: return 'Suggestion';
@@ -244,7 +261,7 @@ function InterviewModal({
                         </CardHeader>
                         <CardContent className="flex-1 flex flex-col">
                           <ScrollArea className="flex-1 h-32">
-                            <p className="text-sm">{transcript || "Waiting for you to speak..."}</p>
+                            <p className="text-xs">{transcript || "Waiting for you to speak..."}</p>
                           </ScrollArea>
                         </CardContent>
                     </Card>
