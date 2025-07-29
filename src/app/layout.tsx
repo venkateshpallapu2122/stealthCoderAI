@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 export const metadata: Metadata = {
   title: 'Interview Copilot',
   description: 'Your AI assistant for technical interviews.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -27,3 +28,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
