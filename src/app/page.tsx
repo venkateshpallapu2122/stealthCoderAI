@@ -100,7 +100,6 @@ function InterviewModal({
               interimTranscript += event.results[i][0].transcript;
             }
           }
-          
            setTranscript(lastProcessedTranscript + finalTranscript + interimTranscript);
         };
         
@@ -116,7 +115,7 @@ function InterviewModal({
         
         recognitionRef.current.onerror = (event: any) => {
           if (event.error === 'no-speech') {
-            return; // Ignore no-speech errors, they are not critical.
+            return;
           }
           console.error('Speech recognition error', event.error);
           let description = `An unknown error occurred: ${event.error}`;
@@ -188,8 +187,8 @@ function InterviewModal({
                   ];
                 }
                 setSuggestions(newSuggestions);
-                setTranscript(''); // Clear the transcript after processing
-                setLastProcessedTranscript(''); // Reset last processed transcript
+                setTranscript('');
+                setLastProcessedTranscript('');
 
             } catch (error: any) {
                 console.error("Error fetching suggestions:", error);
@@ -199,8 +198,18 @@ function InterviewModal({
                         title: 'AI Model Overloaded',
                         description: 'The AI is currently busy. Please try again in a moment.'
                     });
+                } else if (error.message && error.message.includes('429')) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Rate Limit Exceeded',
+                        description: "You've made too many requests. Please wait a bit before trying again."
+                    });
                 } else {
-                    toast({variant: 'destructive', title: 'AI Error', description: 'Could not fetch suggestions.'});
+                    toast({
+                      variant: 'destructive', 
+                      title: 'Server Error', 
+                      description: 'An unexpected response was received from the server. Please try again.'
+                    });
                 }
             } finally {
                 setIsLoading(false);
