@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'StealthCoderAI',
-  description: 'Your undetectable AI assistant for coding exams and technical interviews.',
+  title: 'Interview Copilot',
+  description: 'Your AI assistant for technical interviews.',
 };
 
 export default function RootLayout({
