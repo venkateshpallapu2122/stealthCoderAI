@@ -35,45 +35,52 @@ function InterviewModal({
   const { toast } = useToast();
 
   const fetchSuggestions = useCallback(async () => {
-      const finalTranscript = transcript.trim();
-      if (!finalTranscript || isLoading) return;
-      
-      setIsLoading(true);
-      setSuggestions([]);
-      try {
-          const input: HandleObjectionInput = {
-              objection: finalTranscript,
-              ...interviewContext
-          };
+    const finalTranscript = transcript.trim();
+    if (!finalTranscript) {
+      toast({
+        variant: 'destructive',
+        title: 'Transcript Empty',
+        description: 'No speech detected to generate suggestions from.',
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+        const input: HandleObjectionInput = {
+            objection: finalTranscript,
+            ...interviewContext
+        };
 
-          const isProductManager = interviewContext.roleName.toLowerCase().includes('product manager');
-          
-          if (isProductManager) {
-            const result = await handleObjectionForProductManager(input);
-            const newSuggestions: Suggestion[] = [
-                {type: 'rebuttal', content: result.rebuttal},
-                {type: 'comparison', content: result.comparison},
-                {type: 'question', content: result.questionToAsk},
-                {type: 'followUp', content: result.followUpQuestion},
-            ];
-            setSuggestions(newSuggestions);
-          } else {
-            const result = await handleObjection(input);
-            const newSuggestions: Suggestion[] = [
-                {type: 'rebuttal', content: result.rebuttal},
-                {type: 'comparison', content: result.comparison},
-                {type: 'question', content: result.questionToAsk},
-            ];
-            setSuggestions(newSuggestions);
-          }
+        const isProductManager = interviewContext.roleName.toLowerCase().includes('product manager');
+        
+        let newSuggestions: Suggestion[];
 
-      } catch (error) {
-          console.error("Error fetching suggestions:", error);
-          toast({variant: 'destructive', title: 'AI Error', description: 'Could not fetch suggestions.'});
-      } finally {
-          setIsLoading(false);
-      }
-  }, [transcript, interviewContext, isLoading, toast]);
+        if (isProductManager) {
+          const result = await handleObjectionForProductManager(input);
+          newSuggestions = [
+              {type: 'rebuttal', content: result.rebuttal},
+              {type: 'comparison', content: result.comparison},
+              {type: 'question', content: result.questionToAsk},
+              {type: 'followUp', content: result.followUpQuestion},
+          ];
+        } else {
+          const result = await handleObjection(input);
+          newSuggestions = [
+              {type: 'rebuttal', content: result.rebuttal},
+              {type: 'comparison', content: result.comparison},
+              {type: 'question', content: result.questionToAsk},
+          ];
+        }
+        setSuggestions(newSuggestions);
+
+    } catch (error) {
+        console.error("Error fetching suggestions:", error);
+        toast({variant: 'destructive', title: 'AI Error', description: 'Could not fetch suggestions.'});
+    } finally {
+        setIsLoading(false);
+    }
+  }, [transcript, interviewContext, toast]);
 
 
   useEffect(() => {
@@ -86,42 +93,53 @@ function InterviewModal({
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true; 
-      recognitionRef.current.interimResults = true;
+      if (!recognitionRef.current) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true; 
+        recognitionRef.current.interimResults = true;
 
-      recognitionRef.current.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
+        recognitionRef.current.onresult = (event: any) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
           }
-        }
-        setTranscript(prev => finalTranscript ? (prev + finalTranscript + ' ') : interimTranscript);
-      };
-
-      recognitionRef.current.onend = () => {
-        // Automatically restart listening if it stops
-        if(isOpen) {
-            recognitionRef.current?.start();
-        }
-      };
+           // Update transcript with both final and interim results for a live feel
+          setTranscript(prev => (prev.split(' ').slice(0, -1).join(' ') + ' ' + finalTranscript + interimTranscript).trim());
+        };
+        
+        recognitionRef.current.onend = () => {
+          // Automatically restart listening if it stops and the modal is still open
+          if(isOpen) {
+              try {
+                recognitionRef.current?.start();
+              } catch(e) {
+                console.error("Could not restart speech recognition", e);
+              }
+          }
+        };
+        
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error', event.error);
+          let description = `An unknown error occurred: ${event.error}`;
+          if (event.error === 'network') {
+            description = 'Could not connect to the speech recognition service. Please check your internet connection.';
+          } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            description = 'Microphone access was denied. Please enable microphone permissions in your browser settings.';
+          }
+          toast({ variant: 'destructive', title: 'Speech Recognition Error', description });
+        };
+      }
       
-      recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error', event.error);
-        let description = `An unknown error occurred: ${event.error}`;
-        if (event.error === 'network') {
-          description = 'Could not connect to the speech recognition service. Please check your internet connection.';
-        } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          description = 'Microphone access was denied. Please enable microphone permissions in your browser settings.';
-        }
-        toast({ variant: 'destructive', title: 'Speech Recognition Error', description });
-      };
-
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+      } catch (e) {
+        console.log("Recognition already started.");
+      }
 
     } else {
       toast({ variant: 'destructive', title: 'Unsupported Browser', description: 'Speech recognition is not supported in this browser.' });
@@ -230,7 +248,7 @@ function InterviewModal({
                    <p className="text-xs text-gray-400">Listening... Press Alt+Space to generate suggestions.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button onClick={handleScreenAnalysis} size="icon" variant="ghost" className="text-xs" disabled={isLoading}>
+                    <Button onClick={handleScreenAnalysis} size="icon" variant="ghost" className="text-xs" disabled={isLoading} title="Analyze Screen">
                       <ScreenShare />
                     </Button>
                     <DialogClose asChild>
