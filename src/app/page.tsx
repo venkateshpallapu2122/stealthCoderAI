@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,13 +9,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import InterviewPage from './interview/page'; // Import the interview page component
 
 export default function OnboardingPage() {
   const [roleName, setRoleName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [resumeUrl, setResumeUrl] = useState('');
   const [resumeContent, setResumeContent] = useState('');
-  const router = useRouter();
+  const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -38,8 +38,12 @@ export default function OnboardingPage() {
         resumeContent
     }));
 
-    router.push('/interview');
+    setIsInterviewStarted(true);
   };
+
+  if (isInterviewStarted) {
+    return <InterviewPage />;
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
