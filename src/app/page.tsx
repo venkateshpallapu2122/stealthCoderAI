@@ -43,13 +43,11 @@ export default function OnboardingPage() {
                 className="min-h-[200px]"
               />
             </div>
-            <Link href="/interview" passHref legacyBehavior>
-              <Button className="w-full" asChild>
-                <a>
-                  Start Interview <ArrowRight className="ml-2" />
-                </a>
-              </Button>
-            </Link>
+            <Button className="w-full" asChild>
+              <Link href="/interview">
+                Start Interview <ArrowRight className="ml-2" />
+              </Link>
+            </Button>
           </form>
         </CardContent>
       </Card>
