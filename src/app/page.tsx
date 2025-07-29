@@ -38,7 +38,7 @@ function InterviewModal({
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
+      recognitionRef.current.continuous = false; // Only listen for a single utterance
       recognitionRef.current.interimResults = true;
 
       recognitionRef.current.onresult = (event: any) => {
@@ -51,9 +51,13 @@ function InterviewModal({
             interimTranscript += event.results[i][0].transcript;
           }
         }
-        setTranscript(finalTranscript + interimTranscript);
-        if (finalTranscript) {
-          fetchSuggestions(finalTranscript);
+        setTranscript(finalTranscript || interimTranscript);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+        if (transcript.trim()) {
+            fetchSuggestions(transcript);
         }
       };
       
@@ -78,9 +82,9 @@ function InterviewModal({
             recognitionRef.current.stop();
         }
     }
-  }, [toast]);
+  }, [toast, transcript]); // Add transcript to dependency array
   
-  const toggleListening = () => {
+  const handleListen = () => {
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
@@ -228,7 +232,7 @@ function InterviewModal({
                         ))
                     ) : (
                         <Card className="bg-white/10 border-white/20 text-white min-h-[120px] flex items-center justify-center">
-                            <p className="text-lg">{isListening ? 'Listening for objections...' : 'AI suggestions will appear here...'}</p>
+                            <p className="text-lg">{isListening ? 'Listening for objections...' : 'Tap "Listen" to start...'}</p>
                         </Card>
                     )}
                 </div>
@@ -242,11 +246,11 @@ function InterviewModal({
                         </CardContent>
                     </Card>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={toggleListening} size="lg" className={`w-full ${isListening ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                      <Button onClick={handleListen} disabled={isListening} size="lg" className={`w-full ${isListening ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
                         {isListening ? <MicOff className="mr-2" /> : <Mic className="mr-2" />}
-                        {isListening ? 'Stop' : 'Listen'}
+                        {isListening ? 'Listening...' : 'Listen'}
                       </Button>
-                      <Button onClick={handleScreenAnalysis} size="lg" variant="outline">
+                      <Button onClick={handleScreenAnalysis} size="lg" variant="outline" disabled={isLoading}>
                           <ScreenShare className="mr-2" />
                           Analyze Screen
                       </Button>
@@ -358,3 +362,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
