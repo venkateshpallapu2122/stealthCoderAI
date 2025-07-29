@@ -11,7 +11,7 @@ import { ArrowRight, Mic, MicOff, Settings, Book, Lightbulb, Zap, Bot, ScreenSha
 import { useToast } from '@/hooks/use-toast';
 import { handleObjection, HandleObjectionInput } from '@/ai/flows/handle-objection-flow';
 import { generateCodeAndExplanationFromScreenshot, GenerateCodeAndExplanationFromScreenshotInput } from '@/ai/flows/generate-code-and-explanation-from-screenshot';
-import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay } from "@/components/ui/dialog";
 
 type Suggestion = {
   type: 'rebuttal' | 'comparison' | 'question' | 'code' | 'explanation';
@@ -178,15 +178,15 @@ function InterviewModal({
         <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
         <DialogContent className="bg-transparent border-none shadow-none max-w-4xl w-full p-0 data-[state=open]:animate-none data-[state=closed]:animate-none">
             <div className="w-full flex flex-col gap-4">
-                <header className="flex justify-between items-center text-white pt-4">
-                <div className="flex flex-col">
-                    <h1 className="text-2xl font-bold">Live Objection Handling & Battlecards</h1>
-                    <p className="text-sm text-gray-300">Cluely listens for objections and instantly surfaces the right responses, competitor comparisons, or rebuttals — no tab-switching needed.</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={onClose}>
-                    <Settings />
-                </Button>
-                </header>
+                <DialogHeader className="flex justify-between items-center text-white pt-4 text-left">
+                  <div>
+                    <DialogTitle className="text-2xl font-bold">Live Objection Handling & Battlecards</DialogTitle>
+                    <DialogDescription className="text-sm text-gray-300">Cluely listens for objections and instantly surfaces the right responses, competitor comparisons, or rebuttals — no tab-switching needed.</DialogDescription>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={onClose}>
+                      <Settings />
+                  </Button>
+                </DialogHeader>
 
                 <main className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2 space-y-4">
