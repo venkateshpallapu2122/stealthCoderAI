@@ -112,18 +112,16 @@ function InterviewModal({
         recognitionRef.current.interimResults = true;
 
         recognitionRef.current.onresult = (event: any) => {
-          let interimTranscript = '';
           let finalTranscript = '';
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             if (event.results[i].isFinal) {
               finalTranscript += event.results[i][0].transcript;
             } else {
-              interimTranscript += event.results[i][0].transcript;
+              setTranscript(prev => prev + event.results[i][0].transcript);
             }
           }
-           setTranscript(prev => prev + finalTranscript + interimTranscript);
-           if (finalTranscript.trim()) {
-               setTranscript(prev => prev.trim() + ' ');
+           if (finalTranscript) {
+               setTranscript(prev => prev + finalTranscript + ' ');
            }
         };
         
@@ -136,7 +134,7 @@ function InterviewModal({
         
         recognitionRef.current.onerror = (event: any) => {
           setIsListening(false);
-          if (event.error === 'no-speech') {
+          if (event.error === 'no-speech' || event.error === 'aborted') {
              // Ignore this error and just restart.
              startRecognition();
              return;
