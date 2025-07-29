@@ -7,11 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, Mic, MicOff, Settings, Book, Lightbulb, Zap, Bot, ScreenShare, X } from 'lucide-react';
+import { ArrowRight, Mic, MicOff, Book, Lightbulb, Zap, Bot, ScreenShare, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { handleObjection, HandleObjectionInput } from '@/ai/flows/handle-objection-flow';
 import { generateCodeAndExplanationFromScreenshot, GenerateCodeAndExplanationFromScreenshotInput } from '@/ai/flows/generate-code-and-explanation-from-screenshot';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay, DialogClose } from "@/components/ui/dialog";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Suggestion = {
   type: 'rebuttal' | 'comparison' | 'question' | 'code' | 'explanation';
@@ -237,16 +238,18 @@ function InterviewModal({
                     )}
                 </div>
                 <div className="space-y-4 flex flex-col">
-                    <Card className="bg-white/10 border-white/20 text-white flex-1">
+                    <Card className="bg-white/10 border-white/20 text-white flex-1 flex flex-col">
                         <CardHeader>
                             <CardTitle>Live Transcript</CardTitle>
                         </CardHeader>
-                        <CardContent className="h-48 overflow-y-auto">
-                            <p>{transcript || "Waiting for you to speak..."}</p>
+                        <CardContent className="flex-1 flex flex-col">
+                          <ScrollArea className="flex-1 h-32">
+                            <p className="text-sm">{transcript || "Waiting for you to speak..."}</p>
+                          </ScrollArea>
                         </CardContent>
                     </Card>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={handleListen} disabled={isListening} size="lg" className={`w-full ${isListening ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                      <Button onClick={handleListen} disabled={isLoading} size="lg" className={`w-full ${isListening ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
                         {isListening ? <MicOff className="mr-2" /> : <Mic className="mr-2" />}
                         {isListening ? 'Listening...' : 'Listen'}
                       </Button>
@@ -362,7 +365,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
-
-    
