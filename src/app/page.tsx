@@ -190,9 +190,17 @@ function InterviewModal({
                 setSuggestions(newSuggestions);
                 setTranscript('');
 
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error fetching suggestions:", error);
-                toast({variant: 'destructive', title: 'AI Error', description: 'Could not fetch suggestions.'});
+                if (error.message && (error.message.includes('503') || error.message.includes('overloaded'))) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'AI Model Overloaded',
+                        description: 'The AI is currently busy. Please try again in a moment.'
+                    });
+                } else {
+                    toast({variant: 'destructive', title: 'AI Error', description: 'Could not fetch suggestions.'});
+                }
             } finally {
                 setIsLoading(false);
             }
