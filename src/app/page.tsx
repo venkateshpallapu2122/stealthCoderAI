@@ -101,7 +101,7 @@ function InterviewModal({
             }
           }
           
-           setTranscript(prev => (prev + ' ' + finalTranscript + interimTranscript).trim());
+           setTranscript(lastProcessedTranscript + finalTranscript + interimTranscript);
         };
         
         recognitionRef.current.onend = () => {
@@ -144,7 +144,7 @@ function InterviewModal({
             recognitionRef.current.stop();
         }
     }
-  }, [isOpen, toast]);
+  }, [isOpen, toast, lastProcessedTranscript]);
   
 
   useEffect(() => {
@@ -188,7 +188,8 @@ function InterviewModal({
                   ];
                 }
                 setSuggestions(newSuggestions);
-                setTranscript('');
+                setTranscript(''); // Clear the transcript after processing
+                setLastProcessedTranscript(''); // Reset last processed transcript
 
             } catch (error: any) {
                 console.error("Error fetching suggestions:", error);
