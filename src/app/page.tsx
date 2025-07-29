@@ -74,16 +74,37 @@ function InterviewModal({
   const [isLoading, setIsLoading] = useState(false);
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
+  const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
         if (recognitionRef.current) {
             recognitionRef.current.stop();
+            setIsListening(false);
         }
         return;
     }
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    const startRecognition = () => {
+        if (recognitionRef.current && !isListening) {
+            try {
+                recognitionRef.current.start();
+                setIsListening(true);
+            } catch (e) {
+                console.log("Recognition already started.");
+            }
+        }
+    };
+
+    const stopRecognition = () => {
+        if (recognitionRef.current && isListening) {
+            recognitionRef.current.stop();
+            setIsListening(false);
+        }
+    };
+
     if (SpeechRecognition) {
       if (!recognitionRef.current) {
         recognitionRef.current = new SpeechRecognition();
@@ -100,24 +121,27 @@ function InterviewModal({
               interimTranscript += event.results[i][0].transcript;
             }
           }
-           setTranscript(lastProcessedTranscript + finalTranscript + interimTranscript);
+           setTranscript(prev => prev + finalTranscript + interimTranscript);
+           if (finalTranscript.trim()) {
+               setTranscript(prev => prev.trim() + ' ');
+           }
         };
         
         recognitionRef.current.onend = () => {
-          if(isOpen) {
-              try {
-                recognitionRef.current?.start();
-              } catch(e) {
-                console.error("Could not restart speech recognition", e);
-              }
-          }
+            setIsListening(false);
+            if(isOpen) { // Only restart if the modal is supposed to be open
+                startRecognition();
+            }
         };
         
         recognitionRef.current.onerror = (event: any) => {
-          if (event.error === 'no-speech' || event.error === 'audio-capture') {
-            return;
+          setIsListening(false);
+          if (event.error === 'no-speech') {
+             // Ignore this error and just restart.
+             startRecognition();
+             return;
           }
-          console.error('Speech recognition error', event.error);
+
           let description = `An unknown error occurred: ${event.error}`;
           if (event.error === 'network') {
             description = 'Could not connect to the speech recognition service. Please check your internet connection.';
@@ -125,26 +149,22 @@ function InterviewModal({
           } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
             description = 'Microphone access was denied. Please enable microphone permissions in your browser settings.';
              toast({ variant: 'destructive', title: 'Speech Recognition Error', description });
+          } else {
+             console.error('Speech recognition error', event.error);
           }
         };
       }
       
-      try {
-        recognitionRef.current.start();
-      } catch (e) {
-        console.log("Recognition already started.");
-      }
+      startRecognition();
 
     } else {
       toast({ variant: 'destructive', title: 'Unsupported Browser', description: 'Speech recognition is not supported in this browser.' });
     }
     
     return () => {
-        if(recognitionRef.current) {
-            recognitionRef.current.stop();
-        }
+        stopRecognition();
     }
-  }, [isOpen, toast, lastProcessedTranscript]);
+  }, [isOpen, toast, isListening]);
   
 
   useEffect(() => {
