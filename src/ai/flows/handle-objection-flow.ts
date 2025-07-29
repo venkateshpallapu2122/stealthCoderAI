@@ -21,8 +21,6 @@ export type HandleObjectionInput = z.infer<typeof HandleObjectionInputSchema>;
 
 const HandleObjectionOutputSchema = z.object({
   rebuttal: z.string().describe('A direct response or rebuttal to the objection.'),
-  comparison: z.string().describe('A relevant comparison to a competitor or alternative.'),
-  questionToAsk: z.string().describe('A clarifying or insightful question to ask back to the interviewer.'),
 });
 export type HandleObjectionOutput = z.infer<typeof HandleObjectionOutputSchema>;
 
@@ -31,7 +29,7 @@ const prompt = ai.definePrompt({
   name: 'handleObjectionPrompt',
   input: { schema: HandleObjectionInputSchema },
   output: { schema: HandleObjectionOutputSchema },
-  prompt: `You are an expert interview co-pilot. You are listening to an interview and need to provide real-time suggestions.
+  prompt: `You are an expert interview co-pilot. You are listening to an interview and need to provide a real-time suggestion.
 The user is being interviewed and has just heard the following objection or question:
 
 "{{{objection}}}"
@@ -41,10 +39,7 @@ Here is the context for the interview:
 - Job Description: {{{jobDescription}}}
 - User's Resume: {{{resume}}}
 
-Based on this, provide:
-1.  A strong, concise rebuttal or response, keeping the user's resume and the job description in mind.
-2.  A relevant comparison to a competitor product, technology, or approach that highlights the user's strengths.
-3.  An insightful question to ask back to the interviewer to show engagement and turn the conversation.
+Based on this, provide a strong, concise rebuttal or response, keeping the user's resume and the job description in mind.
 `,
 });
 
@@ -67,8 +62,6 @@ export async function handleObjection(input: HandleObjectionInput): Promise<Hand
 
 const HandleObjectionForProductManagerOutputSchema = z.object({
   rebuttal: z.string().describe('A direct response or rebuttal to the objection.'),
-  comparison: z.string().describe('A relevant comparison to a competitor or alternative.'),
-  questionToAsk: z.string().describe('A clarifying or insightful question to ask back to the interviewer.'),
   followUpQuestion: z.string().describe('A strategic follow-up question to probe deeper into the topic.'),
 });
 export type HandleObjectionForProductManagerOutput = z.infer<typeof HandleObjectionForProductManagerOutputSchema>;
@@ -90,9 +83,7 @@ Here is the context for the interview:
 
 Based on this, provide:
 1.  A strong, concise rebuttal or response, keeping the user's resume and the job description in mind.
-2.  A relevant comparison to a competitor product, technology, or approach that highlights the user's strengths.
-3.  An insightful question to ask back to the interviewer to show engagement and turn the conversation.
-4.  A strategic follow-up question that the user could ask to demonstrate deep product thinking.
+2.  A strategic follow-up question that the user could ask to demonstrate deep product thinking.
 `,
 });
 

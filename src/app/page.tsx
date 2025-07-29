@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, Dialog
 import { ScrollArea } from '@/components/ui/scroll-area';
 import useSimulatedTyper from '@/hooks/use-simulated-typer';
 
-type SuggestionType = 'rebuttal' | 'comparison' | 'question' | 'followUp';
+type SuggestionType = 'rebuttal' | 'followUp';
 
 function SuggestionCard({ type, content }: { type: SuggestionType, content: string }) {
     const { typedText, startTyping } = useSimulatedTyper(content);
@@ -26,8 +26,6 @@ function SuggestionCard({ type, content }: { type: SuggestionType, content: stri
     const getIconForType = (type: SuggestionType) => {
         switch (type) {
             case 'rebuttal': return <Zap className="text-yellow-400" />;
-            case 'comparison': return <Book className="text-blue-400" />;
-            case 'question': return <Lightbulb className="text-green-400" />;
             case 'followUp': return <HelpCircle className="text-orange-400" />;
             default: return <Bot />;
         }
@@ -36,8 +34,6 @@ function SuggestionCard({ type, content }: { type: SuggestionType, content: stri
     const getTitleForType = (type: SuggestionType) => {
         switch (type) {
             case 'rebuttal': return 'Rebuttal';
-            case 'comparison': return 'Comparison';
-            case 'question': return 'Question to Ask';
             case 'followUp': return 'Follow-up Question';
             default: return 'Suggestion';
         }
@@ -75,6 +71,7 @@ function InterviewModal({
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
   const [isListening, setIsListening] = useState(false);
+  const finalTranscriptRef = useRef('');
 
   useEffect(() => {
     if (!isOpen) {
@@ -112,17 +109,17 @@ function InterviewModal({
         recognitionRef.current.interimResults = true;
 
         recognitionRef.current.onresult = (event: any) => {
-          let finalTranscript = '';
+          let interimTranscript = '';
+          finalTranscriptRef.current = '';
+
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
+              finalTranscriptRef.current += event.results[i][0].transcript;
             } else {
-              setTranscript(prev => prev + event.results[i][0].transcript);
+              interimTranscript += event.results[i][0].transcript;
             }
           }
-           if (finalTranscript) {
-               setTranscript(prev => prev + finalTranscript + ' ');
-           }
+          setTranscript(finalTranscriptRef.current + interimTranscript);
         };
         
         recognitionRef.current.onend = () => {
@@ -170,7 +167,7 @@ function InterviewModal({
         if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'x') {
             event.preventDefault();
             
-            const finalTranscript = transcript.trim();
+            const finalTranscript = finalTranscriptRef.current.trim();
             if (!finalTranscript || finalTranscript === lastProcessedTranscript) {
               return;
             }
@@ -193,20 +190,17 @@ function InterviewModal({
                   const result = await handleObjectionForProductManager(input);
                   newSuggestions = [
                       {type: 'rebuttal', content: result.rebuttal},
-                      {type: 'comparison', content: result.comparison},
-                      {type: 'question', content: result.questionToAsk},
                       {type: 'followUp', content: result.followUpQuestion},
                   ];
                 } else {
                   const result = await handleObjection(input);
                   newSuggestions = [
                       {type: 'rebuttal', content: result.rebuttal},
-                      {type: 'comparison', content: result.comparison},
-                      {type: 'question', content: result.questionToAsk},
                   ];
                 }
                 setSuggestions(newSuggestions);
                 setTranscript('');
+                finalTranscriptRef.current = '';
                 setLastProcessedTranscript('');
 
             } catch (error: any) {
@@ -239,7 +233,7 @@ function InterviewModal({
     return () => {
         window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [transcript, interviewContext, toast, lastProcessedTranscript]);
+  }, [interviewContext, toast, lastProcessedTranscript]);
   
   if (!isOpen) return null;
 
