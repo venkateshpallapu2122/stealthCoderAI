@@ -59,12 +59,11 @@ function InterviewModal({
               interimTranscript += event.results[i][0].transcript;
             }
           }
-           // Update transcript with both final and interim results for a live feel
-          setTranscript(prev => (prev.split(' ').slice(0, -1).join(' ') + ' ' + finalTranscript + interimTranscript).trim());
+          
+           setTranscript(prev => (prev + ' ' + finalTranscript + interimTranscript).trim());
         };
         
         recognitionRef.current.onend = () => {
-          // Automatically restart listening if it stops and the modal is still open
           if(isOpen) {
               try {
                 recognitionRef.current?.start();
@@ -106,59 +105,60 @@ function InterviewModal({
 
   useEffect(() => {
     const handleKeyDown = async (event: KeyboardEvent) => {
-      if (event.altKey && event.code === 'Space') {
-        event.preventDefault();
-        
-        const finalTranscript = transcript.trim();
-        if (!finalTranscript) {
-          toast({
-            variant: 'destructive',
-            title: 'Transcript Empty',
-            description: 'No speech detected to generate suggestions from.',
-          });
-          return;
-        }
-        
-        setIsLoading(true);
-        try {
-            const input: HandleObjectionInput = {
-                objection: finalTranscript,
-                ...interviewContext
-            };
-
-            const isProductManager = interviewContext.roleName.toLowerCase().includes('product manager');
+        if (event.altKey && event.code === 'Space') {
+            event.preventDefault();
             
-            let newSuggestions: Suggestion[];
-
-            if (isProductManager) {
-              const result = await handleObjectionForProductManager(input);
-              newSuggestions = [
-                  {type: 'rebuttal', content: result.rebuttal},
-                  {type: 'comparison', content: result.comparison},
-                  {type: 'question', content: result.questionToAsk},
-                  {type: 'followUp', content: result.followUpQuestion},
-              ];
-            } else {
-              const result = await handleObjection(input);
-              newSuggestions = [
-                  {type: 'rebuttal', content: result.rebuttal},
-                  {type: 'comparison', content: result.comparison},
-                  {type: 'question', content: result.questionToAsk},
-              ];
+            const finalTranscript = transcript.trim();
+            if (!finalTranscript) {
+              toast({
+                variant: 'destructive',
+                title: 'Transcript Empty',
+                description: 'No speech detected to generate suggestions from.',
+              });
+              return;
             }
-            setSuggestions(newSuggestions);
+            
+            setIsLoading(true);
+            try {
+                const input: HandleObjectionInput = {
+                    objection: finalTranscript,
+                    ...interviewContext
+                };
 
-        } catch (error) {
-            console.error("Error fetching suggestions:", error);
-            toast({variant: 'destructive', title: 'AI Error', description: 'Could not fetch suggestions.'});
-        } finally {
-            setIsLoading(false);
+                const isProductManager = interviewContext.roleName.toLowerCase().includes('product manager');
+                
+                let newSuggestions: Suggestion[];
+
+                if (isProductManager) {
+                  const result = await handleObjectionForProductManager(input);
+                  newSuggestions = [
+                      {type: 'rebuttal', content: result.rebuttal},
+                      {type: 'comparison', content: result.comparison},
+                      {type: 'question', content: result.questionToAsk},
+                      {type: 'followUp', content: result.followUpQuestion},
+                  ];
+                } else {
+                  const result = await handleObjection(input);
+                  newSuggestions = [
+                      {type: 'rebuttal', content: result.rebuttal},
+                      {type: 'comparison', content: result.comparison},
+                      {type: 'question', content: result.questionToAsk},
+                  ];
+                }
+                setSuggestions(newSuggestions);
+                setTranscript('');
+
+            } catch (error) {
+                console.error("Error fetching suggestions:", error);
+                toast({variant: 'destructive', title: 'AI Error', description: 'Could not fetch suggestions.'});
+            } finally {
+                setIsLoading(false);
+            }
         }
-      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keydown', handleKeyDown);
     };
   }, [transcript, interviewContext, toast]);
   
@@ -312,6 +312,53 @@ export default function OnboardingPage() {
   });
   const { toast } = useToast();
 
+  useEffect(() => {
+    try {
+        const savedRoleName = localStorage.getItem('roleName') || '';
+        const savedJobDescription = localStorage.getItem('jobDescription') || '';
+        const savedResumeUrl = localStorage.getItem('resumeUrl') || '';
+        const savedResumeContent = localStorage.getItem('resumeContent') || '';
+        setRoleName(savedRoleName);
+        setJobDescription(savedJobDescription);
+        setResumeUrl(savedResumeUrl);
+        setResumeContent(savedResumeContent);
+    } catch (error) {
+        console.error("Could not load from localStorage", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+        localStorage.setItem('roleName', roleName);
+    } catch (error) {
+        console.error("Could not save roleName to localStorage", error);
+    }
+  }, [roleName]);
+
+  useEffect(() => {
+    try {
+        localStorage.setItem('jobDescription', jobDescription);
+    } catch (error) {
+        console.error("Could not save jobDescription to localStorage", error);
+    }
+  }, [jobDescription]);
+
+  useEffect(() => {
+    try {
+        localStorage.setItem('resumeUrl', resumeUrl);
+    } catch (error) {
+        console.error("Could not save resumeUrl to localStorage", error);
+    }
+  }, [resumeUrl]);
+
+  useEffect(() => {
+    try {
+        localStorage.setItem('resumeContent', resumeContent);
+    } catch (error) {
+        console.error("Could not save resumeContent to localStorage", error);
+    }
+  }, [resumeContent]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleName || !jobDescription || (!resumeUrl && !resumeContent)) {
@@ -329,7 +376,6 @@ export default function OnboardingPage() {
         resume: resumeContent || resumeUrl
     };
     setInterviewContext(context);
-    localStorage.setItem('interviewContext', JSON.stringify(context));
     setIsInterviewStarted(true);
   };
 
