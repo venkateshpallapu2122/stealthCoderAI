@@ -4,13 +4,9 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 
 export default function useSimulatedTyper(textToType: string) {
     const [typedText, setTypedText] = useState('');
-    const [isTyping, setIsTyping] = useState(false);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const startTyping = useCallback(() => {
-        if (isTyping) return;
-
-        setIsTyping(true);
         setTypedText('');
 
         let i = 0;
@@ -18,10 +14,9 @@ export default function useSimulatedTyper(textToType: string) {
             if (i < textToType.length) {
                 setTypedText(prev => prev + textToType.charAt(i));
                 i++;
-                const delay = Math.random() * 100 + 50; // Random delay between 50ms and 150ms
+                const delay = Math.random() * 20 + 10; // Faster typing
                 typingTimeoutRef.current = setTimeout(typeCharacter, delay);
             } else {
-                setIsTyping(false);
                 if (typingTimeoutRef.current) {
                     clearTimeout(typingTimeoutRef.current);
                 }
@@ -30,7 +25,7 @@ export default function useSimulatedTyper(textToType: string) {
 
         typeCharacter();
 
-    }, [textToType, isTyping]);
+    }, [textToType]);
     
     useEffect(() => {
         return () => {
@@ -40,5 +35,5 @@ export default function useSimulatedTyper(textToType: string) {
         };
     }, []);
 
-    return { typedText, isTyping, startTyping };
+    return { typedText, startTyping };
 }

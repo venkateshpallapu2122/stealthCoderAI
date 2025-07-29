@@ -12,11 +12,52 @@ import { useToast } from '@/hooks/use-toast';
 import { handleObjection, HandleObjectionInput, handleObjectionForProductManager } from '@/ai/flows/handle-objection-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import useSimulatedTyper from '@/hooks/use-simulated-typer';
 
-type Suggestion = {
-  type: 'rebuttal' | 'comparison' | 'question' | 'followUp';
-  content: string;
-};
+type SuggestionType = 'rebuttal' | 'comparison' | 'question' | 'followUp';
+
+function SuggestionCard({ type, content }: { type: SuggestionType, content: string }) {
+    const { typedText, startTyping } = useSimulatedTyper(content);
+
+    useEffect(() => {
+        startTyping();
+    }, [startTyping]);
+
+    const getIconForType = (type: SuggestionType) => {
+        switch (type) {
+            case 'rebuttal': return <Zap className="text-yellow-400" />;
+            case 'comparison': return <Book className="text-blue-400" />;
+            case 'question': return <Lightbulb className="text-green-400" />;
+            case 'followUp': return <HelpCircle className="text-orange-400" />;
+            default: return <Bot />;
+        }
+    };
+
+    const getTitleForType = (type: SuggestionType) => {
+        switch (type) {
+            case 'rebuttal': return 'Rebuttal';
+            case 'comparison': return 'Comparison';
+            case 'question': return 'Question to Ask';
+            case 'followUp': return 'Follow-up Question';
+            default: return 'Suggestion';
+        }
+    }
+
+    return (
+        <Card className="bg-black/50 border-white/20 text-white animate-in fade-in-0 duration-500 text-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 pt-2 px-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                    {getIconForType(type)}
+                    {getTitleForType(type)}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-3">
+                <p className="whitespace-pre-wrap text-xs">{typedText}</p>
+            </CardContent>
+        </Card>
+    );
+}
+
 
 function InterviewModal({
   isOpen,
@@ -29,7 +70,7 @@ function InterviewModal({
 }) {
   const [transcript, setTranscript] = useState('');
   const [lastProcessedTranscript, setLastProcessedTranscript] = useState('');
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<{type: SuggestionType, content: string}[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
@@ -117,6 +158,7 @@ function InterviewModal({
             }
             
             setIsLoading(true);
+            setSuggestions([]);
             setLastProcessedTranscript(finalTranscript);
 
             try {
@@ -127,7 +169,7 @@ function InterviewModal({
 
                 const isProductManager = interviewContext.roleName.toLowerCase().includes('product manager');
                 
-                let newSuggestions: Suggestion[];
+                let newSuggestions: {type: SuggestionType, content: string}[];
 
                 if (isProductManager) {
                   const result = await handleObjectionForProductManager(input);
@@ -162,26 +204,6 @@ function InterviewModal({
     };
   }, [transcript, interviewContext, toast, lastProcessedTranscript]);
   
-  const getIconForType = (type: Suggestion['type']) => {
-    switch (type) {
-      case 'rebuttal': return <Zap className="text-yellow-400" />;
-      case 'comparison': return <Book className="text-blue-400" />;
-      case 'question': return <Lightbulb className="text-green-400" />;
-      case 'followUp': return <HelpCircle className="text-orange-400" />;
-      default: return <Bot />;
-    }
-  };
-
-  const getTitleForType = (type: Suggestion['type']) => {
-    switch (type) {
-      case 'rebuttal': return 'Rebuttal';
-      case 'comparison': return 'Comparison';
-      case 'question': return 'Question to Ask';
-      case 'followUp': return 'Follow-up Question';
-      default: return 'Suggestion';
-    }
-  }
-
   if (!isOpen) return null;
 
   return (
@@ -212,17 +234,7 @@ function InterviewModal({
                     </div>
                 ) : suggestions.length > 0 ? (
                     suggestions.map((suggestion, index) => (
-                        <Card key={index} className="bg-black/50 border-white/20 text-white animate-in fade-in-0 duration-500 text-sm">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2 pt-2 px-3">
-                            <CardTitle className="text-base flex items-center gap-2">
-                                {getIconForType(suggestion.type)}
-                                {getTitleForType(suggestion.type)}
-                            </CardTitle>
-                            </CardHeader>
-                            <CardContent className="px-3 pb-3">
-                                <p className="whitespace-pre-wrap text-xs">{suggestion.content}</p>
-                            </CardContent>
-                        </Card>
+                       <SuggestionCard key={index} type={suggestion.type} content={suggestion.content} />
                     ))
                 ) : (
                     <div className="text-gray-400 min-h-[100px] flex items-center justify-center text-center px-4">
@@ -325,7 +337,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
-      {!isInterviewStarted && (
+      {!isInterviewStarted ? (
         <Card className="w-full max-w-2xl">
           <CardHeader>
             <CardTitle>Welcome to Your Interview Copilot</CardTitle>
@@ -379,7 +391,7 @@ export default function OnboardingPage() {
             </form>
           </CardContent>
         </Card>
-      )}
+      ) : null}
       
       <InterviewModal 
         isOpen={isInterviewStarted}
