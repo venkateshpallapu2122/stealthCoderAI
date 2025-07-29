@@ -34,55 +34,6 @@ function InterviewModal({
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
 
-  const fetchSuggestions = useCallback(async () => {
-    const finalTranscript = transcript.trim();
-    if (!finalTranscript) {
-      toast({
-        variant: 'destructive',
-        title: 'Transcript Empty',
-        description: 'No speech detected to generate suggestions from.',
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-        const input: HandleObjectionInput = {
-            objection: finalTranscript,
-            ...interviewContext
-        };
-
-        const isProductManager = interviewContext.roleName.toLowerCase().includes('product manager');
-        
-        let newSuggestions: Suggestion[];
-
-        if (isProductManager) {
-          const result = await handleObjectionForProductManager(input);
-          newSuggestions = [
-              {type: 'rebuttal', content: result.rebuttal},
-              {type: 'comparison', content: result.comparison},
-              {type: 'question', content: result.questionToAsk},
-              {type: 'followUp', content: result.followUpQuestion},
-          ];
-        } else {
-          const result = await handleObjection(input);
-          newSuggestions = [
-              {type: 'rebuttal', content: result.rebuttal},
-              {type: 'comparison', content: result.comparison},
-              {type: 'question', content: result.questionToAsk},
-          ];
-        }
-        setSuggestions(newSuggestions);
-
-    } catch (error) {
-        console.error("Error fetching suggestions:", error);
-        toast({variant: 'destructive', title: 'AI Error', description: 'Could not fetch suggestions.'});
-    } finally {
-        setIsLoading(false);
-    }
-  }, [transcript, interviewContext, toast]);
-
-
   useEffect(() => {
     if (!isOpen) {
         if (recognitionRef.current) {
@@ -154,17 +105,62 @@ function InterviewModal({
   
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = async (event: KeyboardEvent) => {
       if (event.altKey && event.code === 'Space') {
         event.preventDefault();
-        fetchSuggestions();
+        
+        const finalTranscript = transcript.trim();
+        if (!finalTranscript) {
+          toast({
+            variant: 'destructive',
+            title: 'Transcript Empty',
+            description: 'No speech detected to generate suggestions from.',
+          });
+          return;
+        }
+        
+        setIsLoading(true);
+        try {
+            const input: HandleObjectionInput = {
+                objection: finalTranscript,
+                ...interviewContext
+            };
+
+            const isProductManager = interviewContext.roleName.toLowerCase().includes('product manager');
+            
+            let newSuggestions: Suggestion[];
+
+            if (isProductManager) {
+              const result = await handleObjectionForProductManager(input);
+              newSuggestions = [
+                  {type: 'rebuttal', content: result.rebuttal},
+                  {type: 'comparison', content: result.comparison},
+                  {type: 'question', content: result.questionToAsk},
+                  {type: 'followUp', content: result.followUpQuestion},
+              ];
+            } else {
+              const result = await handleObjection(input);
+              newSuggestions = [
+                  {type: 'rebuttal', content: result.rebuttal},
+                  {type: 'comparison', content: result.comparison},
+                  {type: 'question', content: result.questionToAsk},
+              ];
+            }
+            setSuggestions(newSuggestions);
+
+        } catch (error) {
+            console.error("Error fetching suggestions:", error);
+            toast({variant: 'destructive', title: 'AI Error', description: 'Could not fetch suggestions.'});
+        } finally {
+            setIsLoading(false);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [fetchSuggestions]);
+  }, [transcript, interviewContext, toast]);
   
   const handleScreenAnalysis = async () => {
     if (isLoading) return;
