@@ -9,15 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowRight, Book, Lightbulb, Zap, Bot, X, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { handleObjection, HandleObjectionInput, handleObjectionForProductManager } from '@/ai/flows/handle-objection-flow';
+import { handleObjection, HandleObjectionInput, HandleObjectionOutput } from '@/ai/flows/handle-objection-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import useSimulatedTyper from '@/hooks/use-simulated-typer';
 
-type SuggestionType = 'rebuttal' | 'followUp';
+type SuggestionType = 'rebuttal';
 
-function SuggestionCard({ type, content }: { type: SuggestionType, content: string }) {
-    const { typedText, startTyping } = useSimulatedTyper(content);
+function SuggestionCard({ type, content }: { type: SuggestionType, content: string[] }) {
+    const { typedText, startTyping } = useSimulatedTyper(content.map(c => `• ${c}`).join('\n'));
 
     useEffect(() => {
         startTyping();
@@ -26,15 +26,13 @@ function SuggestionCard({ type, content }: { type: SuggestionType, content: stri
     const getIconForType = (type: SuggestionType) => {
         switch (type) {
             case 'rebuttal': return <Zap className="text-yellow-400" />;
-            case 'followUp': return <HelpCircle className="text-orange-400" />;
             default: return <Bot />;
         }
     };
 
     const getTitleForType = (type: SuggestionType) => {
         switch (type) {
-            case 'rebuttal': return 'Rebuttal';
-            case 'followUp': return 'Follow-up Question';
+            case 'rebuttal': return 'Rebuttal Points';
             default: return 'Suggestion';
         }
     }
@@ -66,7 +64,7 @@ function InterviewModal({
 }) {
   const [transcript, setTranscript] = useState('');
   const [lastProcessedTranscript, setLastProcessedTranscript] = useState('');
-  const [suggestions, setSuggestions] = useState<{type: SuggestionType, content: string}[]>([]);
+  const [suggestions, setSuggestions] = useState<{type: SuggestionType, content: string[]}[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
@@ -124,7 +122,7 @@ function InterviewModal({
         
         recognitionRef.current.onend = () => {
             setIsListening(false);
-            if(isOpen) { // Only restart if the modal is supposed to be open
+            if(isOpen) { 
                 startRecognition();
             }
         };
@@ -132,7 +130,6 @@ function InterviewModal({
         recognitionRef.current.onerror = (event: any) => {
           setIsListening(false);
           if (event.error === 'no-speech' || event.error === 'aborted') {
-             // Ignore this error and just restart.
              startRecognition();
              return;
           }
@@ -140,10 +137,12 @@ function InterviewModal({
           let description = `An unknown error occurred: ${event.error}`;
           if (event.error === 'network') {
             description = 'Could not connect to the speech recognition service. Please check your internet connection.';
-             toast({ variant: 'destructive', title: 'Speech Recognition Error', description });
           } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
             description = 'Microphone access was denied. Please enable microphone permissions in your browser settings.';
-             toast({ variant: 'destructive', title: 'Speech Recognition Error', description });
+          }
+          
+          if (event.error === 'not-allowed' || event.error === 'network') {
+            toast({ variant: 'destructive', title: 'Speech Recognition Error', description });
           } else {
              console.error('Speech recognition error', event.error);
           }
@@ -182,22 +181,11 @@ function InterviewModal({
                     ...interviewContext
                 };
 
-                const isProductManager = interviewContext.roleName.toLowerCase().includes('product manager');
-                
-                let newSuggestions: {type: SuggestionType, content: string}[];
+                const result = await handleObjection(input);
+                const newSuggestions: {type: SuggestionType, content: string[]}[] = [
+                    {type: 'rebuttal', content: result.rebuttalPoints},
+                ];
 
-                if (isProductManager) {
-                  const result = await handleObjectionForProductManager(input);
-                  newSuggestions = [
-                      {type: 'rebuttal', content: result.rebuttal},
-                      {type: 'followUp', content: result.followUpQuestion},
-                  ];
-                } else {
-                  const result = await handleObjection(input);
-                  newSuggestions = [
-                      {type: 'rebuttal', content: result.rebuttal},
-                  ];
-                }
                 setSuggestions(newSuggestions);
                 setTranscript('');
                 finalTranscriptRef.current = '';
@@ -205,25 +193,19 @@ function InterviewModal({
 
             } catch (error: any) {
                 console.error("Error fetching suggestions:", error);
-                if (error.message && (error.message.includes('503') || error.message.includes('overloaded'))) {
-                    toast({
-                        variant: 'destructive',
-                        title: 'AI Model Overloaded',
-                        description: 'The AI is currently busy. Please try again in a moment.'
-                    });
-                } else if (error.message && error.message.includes('429')) {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Rate Limit Exceeded',
-                        description: "You've made too many requests. Please wait a bit before trying again."
-                    });
-                } else {
-                    toast({
-                      variant: 'destructive', 
-                      title: 'Server Error', 
-                      description: 'An unexpected response was received from the server. Please try again.'
-                    });
+                let toastMessage = 'An unexpected response was received from the server. Please try again.';
+                if (error.message) {
+                    if (error.message.includes('503') || error.message.includes('overloaded')) {
+                        toastMessage = 'The AI is currently busy. Please try again in a moment.';
+                    } else if (error.message.includes('429')) {
+                        toastMessage = "You've made too many requests. Please wait a bit before trying again.";
+                    }
                 }
+                toast({
+                    variant: 'destructive',
+                    title: 'Server Error',
+                    description: toastMessage
+                });
             } finally {
                 setIsLoading(false);
             }

@@ -20,7 +20,7 @@ const HandleObjectionInputSchema = z.object({
 export type HandleObjectionInput = z.infer<typeof HandleObjectionInputSchema>;
 
 const HandleObjectionOutputSchema = z.object({
-  rebuttal: z.string().describe('A direct response or rebuttal to the objection.'),
+  rebuttalPoints: z.array(z.string()).describe('A list of key talking points for the rebuttal.'),
 });
 export type HandleObjectionOutput = z.infer<typeof HandleObjectionOutputSchema>;
 
@@ -39,7 +39,7 @@ Here is the context for the interview:
 - Job Description: {{{jobDescription}}}
 - User's Resume: {{{resume}}}
 
-Based on this, provide a strong, concise rebuttal or response, keeping the user's resume and the job description in mind.
+Based on this, provide a strong, concise rebuttal or response as a list of key talking points, keeping the user's resume and the job description in mind.
 `,
 });
 
