@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, Mic, MicOff, Book, Lightbulb, Zap, Bot, ScreenShare, X, HelpCircle } from 'lucide-react';
+import { ArrowRight, Book, Lightbulb, Zap, Bot, ScreenShare, X, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { handleObjection, HandleObjectionInput, handleObjectionForProductManager } from '@/ai/flows/handle-objection-flow';
 import { generateCodeAndExplanationFromScreenshot, GenerateCodeAndExplanationFromScreenshotInput } from '@/ai/flows/generate-code-and-explanation-from-screenshot';
@@ -28,20 +28,21 @@ function InterviewModal({
   onClose: () => void;
   interviewContext: Omit<HandleObjectionInput, 'objection'>;
 }) {
-  const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
 
-  const fetchSuggestions = useCallback(async (text: string) => {
-      if(isLoading) return;
+  const fetchSuggestions = useCallback(async () => {
+      const finalTranscript = transcript.trim();
+      if (!finalTranscript || isLoading) return;
+      
       setIsLoading(true);
       setSuggestions([]);
       try {
           const input: HandleObjectionInput = {
-              objection: text,
+              objection: finalTranscript,
               ...interviewContext
           };
 
@@ -72,14 +73,21 @@ function InterviewModal({
       } finally {
           setIsLoading(false);
       }
-  }, [interviewContext, isLoading, toast]);
+  }, [transcript, interviewContext, isLoading, toast]);
 
 
   useEffect(() => {
+    if (!isOpen) {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+        return;
+    }
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false; // Only listen for a single utterance
+      recognitionRef.current.continuous = true; 
       recognitionRef.current.interimResults = true;
 
       recognitionRef.current.onresult = (event: any) => {
@@ -92,14 +100,13 @@ function InterviewModal({
             interimTranscript += event.results[i][0].transcript;
           }
         }
-        setTranscript(finalTranscript || interimTranscript);
+        setTranscript(prev => finalTranscript ? (prev + finalTranscript + ' ') : interimTranscript);
       };
 
       recognitionRef.current.onend = () => {
-        setIsListening(false);
-        const finalTranscript = transcript.trim();
-        if (finalTranscript) {
-            fetchSuggestions(finalTranscript);
+        // Automatically restart listening if it stops
+        if(isOpen) {
+            recognitionRef.current?.start();
         }
       };
       
@@ -112,8 +119,9 @@ function InterviewModal({
           description = 'Microphone access was denied. Please enable microphone permissions in your browser settings.';
         }
         toast({ variant: 'destructive', title: 'Speech Recognition Error', description });
-        setIsListening(false);
       };
+
+      recognitionRef.current.start();
 
     } else {
       toast({ variant: 'destructive', title: 'Unsupported Browser', description: 'Speech recognition is not supported in this browser.' });
@@ -124,32 +132,21 @@ function InterviewModal({
             recognitionRef.current.stop();
         }
     }
-  }, [toast, transcript, fetchSuggestions]);
+  }, [isOpen, toast]);
   
-  const handleListen = useCallback(() => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    } else {
-      setTranscript('');
-      setSuggestions([]);
-      recognitionRef.current?.start();
-      setIsListening(true);
-    }
-  }, [isListening]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.altKey && event.code === 'Space') {
         event.preventDefault();
-        handleListen();
+        fetchSuggestions();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleListen]);
+  }, [fetchSuggestions]);
   
   const handleScreenAnalysis = async () => {
     if (isLoading) return;
@@ -160,7 +157,7 @@ function InterviewModal({
         const videoTrack = stream.getVideoTracks()[0];
         const imageCapture = new (window as any).ImageCapture(videoTrack);
         const bitmap = await imageCapture.grabFrame();
-        videoTrack.stop(); // Stop sharing screen
+        videoTrack.stop(); 
 
         const canvas = document.createElement('canvas');
         canvas.width = bitmap.width;
@@ -225,21 +222,27 @@ function InterviewModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogOverlay className="bg-transparent" />
-        <DialogContent className="bg-black/80 text-white border-white/20 shadow-lg max-w-md w-full p-4 top-4 translate-y-0 data-[state=open]:animate-none data-[state=closed]:animate-none flex flex-col max-h-[95vh]">
+        <DialogContent className="bg-transparent text-white border-none shadow-lg max-w-[500px] w-full p-4 top-4 translate-y-0 data-[state=open]:animate-none data-[state=closed]:animate-none flex flex-col max-h-[95vh]">
             <DialogHeader className="flex-shrink-0">
               <div className="flex justify-between items-center text-left">
                 <div>
                   <DialogTitle className="text-lg font-bold">Interview Assistant</DialogTitle>
+                   <p className="text-xs text-gray-400">Listening... Press Alt+Space to generate suggestions.</p>
                 </div>
-                <DialogClose asChild>
-                  <Button variant="ghost" size="icon" onClick={onClose}>
-                      <X className="h-4 w-4" />
-                  </Button>
-                </DialogClose>
+                <div className="flex items-center gap-2">
+                    <Button onClick={handleScreenAnalysis} size="icon" variant="ghost" className="text-xs" disabled={isLoading}>
+                      <ScreenShare />
+                    </Button>
+                    <DialogClose asChild>
+                      <Button variant="ghost" size="icon" onClick={onClose}>
+                          <X className="h-4 w-4" />
+                      </Button>
+                    </DialogClose>
+                </div>
               </div>
             </DialogHeader>
-
-            <ScrollArea className="flex-1 -mx-4">
+            
+            <ScrollArea className="flex-1 -mx-4" style={{ maxHeight: '40vh' }}>
               <div className="px-4 space-y-2">
                 {isLoading && suggestions.length === 0 ? (
                     <div className="text-white min-h-[100px] flex items-center justify-center">
@@ -247,7 +250,7 @@ function InterviewModal({
                     </div>
                 ) : suggestions.length > 0 ? (
                     suggestions.map((suggestion, index) => (
-                        <Card key={index} className="bg-white/10 border-none text-white animate-in fade-in-0 duration-500 text-sm">
+                        <Card key={index} className="bg-black/50 border-white/20 text-white animate-in fade-in-0 duration-500 text-sm">
                             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-2 px-3">
                             <CardTitle className="text-base flex items-center gap-2">
                                 {getIconForType(suggestion.type)}
@@ -256,7 +259,7 @@ function InterviewModal({
                             </CardHeader>
                             <CardContent className="px-3 pb-3">
                               {suggestion.type === 'code' ? (
-                                <pre className="bg-black/50 p-2 rounded-md overflow-x-auto"><code className="text-xs">{suggestion.content}</code></pre>
+                                <pre className="bg-black/50 p-2 rounded-md overflow-x-auto"><code className="text-xs font-mono">{suggestion.content}</code></pre>
                               ) : (
                                 <p className="whitespace-pre-wrap text-xs">{suggestion.content}</p>
                               )}
@@ -265,26 +268,16 @@ function InterviewModal({
                     ))
                 ) : (
                     <div className="text-gray-400 min-h-[100px] flex items-center justify-center text-center px-4">
-                        <p className="text-sm">{isListening ? 'Listening for objections...' : 'Press Alt + Space or click the Listen button to get suggestions.'}</p>
+                        <p className="text-sm">Suggestions will appear here when you press Alt+Space.</p>
                     </div>
                 )}
               </div>
             </ScrollArea>
             
-            <div className="flex-shrink-0 space-y-2">
-                <ScrollArea className="h-20 rounded-md border border-white/20 p-2">
+            <div className="flex-shrink-0 mt-2">
+                <ScrollArea className="h-20 rounded-md border border-white/20 p-2 bg-black/30">
                   <p className="text-xs text-gray-300">{transcript || "Live transcript will appear here..."}</p>
                 </ScrollArea>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={handleListen} disabled={isLoading} size="sm" className={`w-full ${isListening ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
-                    {isListening ? <MicOff className="mr-2" /> : <Mic className="mr-2" />}
-                    {isListening ? 'Listening...' : 'Listen'}
-                  </Button>
-                  <Button onClick={handleScreenAnalysis} size="sm" variant="outline" className="text-xs" disabled={isLoading}>
-                      <ScreenShare className="mr-2" />
-                      Analyze Screen
-                  </Button>
-                </div>
             </div>
         </DialogContent>
     </Dialog>
@@ -390,3 +383,6 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+
+    
