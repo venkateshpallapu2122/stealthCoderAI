@@ -11,12 +11,12 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const HandleObjectionInputSchema = z.object({
+const HandleObjectionInputSchema = z.object({
   objection: z.string().describe('The objection or question raised by the interviewer.'),
 });
 export type HandleObjectionInput = z.infer<typeof HandleObjectionInputSchema>;
 
-export const HandleObjectionOutputSchema = z.object({
+const HandleObjectionOutputSchema = z.object({
   rebuttal: z.string().describe('A direct response or rebuttal to the objection.'),
   comparison: z.string().describe('A relevant comparison to a competitor or alternative.'),
   questionToAsk: z.string().describe('A clarifying or insightful question to ask back to the interviewer.'),
