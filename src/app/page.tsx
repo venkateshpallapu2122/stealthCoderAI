@@ -183,7 +183,7 @@ function InterviewModal({
         console.error("Error analyzing screen:", error);
         let description = 'Could not analyze the screen.';
         if (error.name === 'NotAllowedError' || error.message.includes('disallowed by permissions policy')) {
-          description = 'Screen capture permission was denied. Please ensure you are on a secure (HTTPS) connection and have granted the necessary permissions.';
+          description = 'Screen capture is disabled by your browser or a permissions policy in this environment. Please try running the app in a different browser or environment.';
         } else if (error.name === 'NotFoundError') {
           description = 'No screen or window was selected to share.'
         }
@@ -383,6 +383,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-
-    
