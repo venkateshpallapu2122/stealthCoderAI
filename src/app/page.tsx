@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, Mic, MicOff, Settings, Book, Lightbulb, Zap, Bot, ScreenShare } from 'lucide-react';
+import { ArrowRight, Mic, MicOff, Settings, Book, Lightbulb, Zap, Bot, ScreenShare, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { handleObjection, HandleObjectionInput } from '@/ai/flows/handle-objection-flow';
 import { generateCodeAndExplanationFromScreenshot, GenerateCodeAndExplanationFromScreenshotInput } from '@/ai/flows/generate-code-and-explanation-from-screenshot';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay, DialogClose } from "@/components/ui/dialog";
 
 type Suggestion = {
   type: 'rebuttal' | 'comparison' | 'question' | 'code' | 'explanation';
@@ -141,9 +141,13 @@ function InterviewModal({
             ];
             setSuggestions(newSuggestions);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error analyzing screen:", error);
-        toast({ variant: 'destructive', title: 'Screen Analysis Error', description: 'Could not analyze the screen.' });
+        let description = 'Could not analyze the screen.';
+        if (error.name === 'NotAllowedError' || error.message.includes('disallowed by permissions policy')) {
+          description = 'Screen capture permission was denied. Please ensure you are on a secure (HTTPS) connection and have granted the necessary permissions.';
+        }
+        toast({ variant: 'destructive', title: 'Screen Analysis Error', description });
     } finally {
         setIsLoading(false);
     }
@@ -178,14 +182,18 @@ function InterviewModal({
         <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
         <DialogContent className="bg-transparent border-none shadow-none max-w-4xl w-full p-0 data-[state=open]:animate-none data-[state=closed]:animate-none">
             <div className="w-full flex flex-col gap-4">
-                <DialogHeader className="flex justify-between items-center text-white pt-4 text-left">
-                  <div>
-                    <DialogTitle className="text-2xl font-bold">Live Objection Handling & Battlecards</DialogTitle>
-                    <DialogDescription className="text-sm text-gray-300">Cluely listens for objections and instantly surfaces the right responses, competitor comparisons, or rebuttals — no tab-switching needed.</DialogDescription>
+               <DialogHeader>
+                  <div className="flex justify-between items-center text-white pt-4 text-left">
+                    <div>
+                      <DialogTitle className="text-2xl font-bold">Live Objection Handling & Battlecards</DialogTitle>
+                      <DialogDescription className="text-sm text-gray-300">Cluely listens for objections and instantly surfaces the right responses, competitor comparisons, or rebuttals — no tab-switching needed.</DialogDescription>
+                    </div>
+                    <DialogClose asChild>
+                      <Button variant="ghost" size="icon" onClick={onClose}>
+                          <X />
+                      </Button>
+                    </DialogClose>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={onClose}>
-                      <Settings />
-                  </Button>
                 </DialogHeader>
 
                 <main className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
