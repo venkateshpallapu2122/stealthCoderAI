@@ -7,15 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, Book, Lightbulb, Zap, Bot, ScreenShare, X, HelpCircle } from 'lucide-react';
+import { ArrowRight, Book, Lightbulb, Zap, Bot, X, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { handleObjection, HandleObjectionInput, handleObjectionForProductManager } from '@/ai/flows/handle-objection-flow';
-import { generateCodeAndExplanationFromScreenshot, GenerateCodeAndExplanationFromScreenshotInput } from '@/ai/flows/generate-code-and-explanation-from-screenshot';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Suggestion = {
-  type: 'rebuttal' | 'comparison' | 'question' | 'code' | 'explanation' | 'followUp';
+  type: 'rebuttal' | 'comparison' | 'question' | 'followUp';
   content: string;
 };
 
@@ -162,59 +161,12 @@ function InterviewModal({
     };
   }, [transcript, interviewContext, toast]);
   
-  const handleScreenAnalysis = async () => {
-    if (isLoading) return;
-    setIsLoading(true);
-    setSuggestions([]);
-    try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        const videoTrack = stream.getVideoTracks()[0];
-        const imageCapture = new (window as any).ImageCapture(videoTrack);
-        const bitmap = await imageCapture.grabFrame();
-        videoTrack.stop(); 
-
-        const canvas = document.createElement('canvas');
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        const context = canvas.getContext('2d');
-        if (context) {
-            context.drawImage(bitmap, 0, 0);
-            const dataUri = canvas.toDataURL('image/png');
-            
-            const input: GenerateCodeAndExplanationFromScreenshotInput = {
-                photoDataUri: dataUri,
-                customPrompt: "Analyze the coding question in the screenshot and provide a solution with an explanation."
-            };
-
-            const result = await generateCodeAndExplanationFromScreenshot(input);
-            const newSuggestions: Suggestion[] = [
-                { type: 'code', content: result.code },
-                { type: 'explanation', content: result.explanation },
-            ];
-            setSuggestions(newSuggestions);
-        }
-    } catch (error: any) {
-        console.error("Error analyzing screen:", error);
-        let description = 'Could not analyze the screen.';
-        if (error.name === 'NotAllowedError' || error.message.includes('disallowed by permissions policy')) {
-          description = 'Screen capture is disabled by your browser or a permissions policy in this environment. Please try running the app in a different browser or environment.';
-        } else if (error.name === 'NotFoundError') {
-          description = 'No screen or window was selected to share.'
-        }
-        toast({ variant: 'destructive', title: 'Screen Analysis Error', description });
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
   const getIconForType = (type: Suggestion['type']) => {
     switch (type) {
       case 'rebuttal': return <Zap className="text-yellow-400" />;
       case 'comparison': return <Book className="text-blue-400" />;
       case 'question': return <Lightbulb className="text-green-400" />;
       case 'followUp': return <HelpCircle className="text-orange-400" />;
-      case 'code': return <Zap className="text-purple-400" />;
-      case 'explanation': return <Book className="text-blue-400" />;
       default: return <Bot />;
     }
   };
@@ -225,8 +177,6 @@ function InterviewModal({
       case 'comparison': return 'Comparison';
       case 'question': return 'Question to Ask';
       case 'followUp': return 'Follow-up Question';
-      case 'code': return 'Code Solution';
-      case 'explanation': return 'Explanation';
       default: return 'Suggestion';
     }
   }
@@ -244,9 +194,6 @@ function InterviewModal({
                    <p className="text-xs text-gray-400">Listening... Press Alt+Space to generate suggestions.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button onClick={handleScreenAnalysis} size="icon" variant="ghost" className="text-xs" disabled={isLoading} title="Analyze Screen">
-                      <ScreenShare />
-                    </Button>
                     <DialogClose asChild>
                       <Button variant="ghost" size="icon" onClick={onClose}>
                           <X className="h-4 w-4" />
@@ -272,11 +219,7 @@ function InterviewModal({
                             </CardTitle>
                             </CardHeader>
                             <CardContent className="px-3 pb-3">
-                              {suggestion.type === 'code' ? (
-                                <pre className="bg-black/50 p-2 rounded-md overflow-x-auto"><code className="text-xs font-mono">{suggestion.content}</code></pre>
-                              ) : (
                                 <p className="whitespace-pre-wrap text-xs">{suggestion.content}</p>
-                              )}
                             </CardContent>
                         </Card>
                     ))
@@ -445,3 +388,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
