@@ -59,7 +59,13 @@ function InterviewModal({
       
       recognitionRef.current.onerror = (event: any) => {
         console.error('Speech recognition error', event.error);
-        toast({ variant: 'destructive', title: 'Speech Recognition Error', description: event.error });
+        let description = `An unknown error occurred: ${event.error}`;
+        if (event.error === 'network') {
+          description = 'Could not connect to the speech recognition service. Please check your internet connection.';
+        } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          description = 'Microphone access was denied. Please enable microphone permissions in your browser settings.';
+        }
+        toast({ variant: 'destructive', title: 'Speech Recognition Error', description });
         setIsListening(false);
       };
 
