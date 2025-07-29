@@ -108,7 +108,7 @@ function InterviewModal({
 
   useEffect(() => {
     const handleKeyDown = async (event: KeyboardEvent) => {
-        if (event.key === 'Alt') {
+        if (event.altKey && event.key === 'g') {
             event.preventDefault();
             
             const finalTranscript = transcript.trim();
@@ -192,7 +192,7 @@ function InterviewModal({
               <div className="flex justify-between items-center text-left">
                 <div>
                   <DialogTitle className="text-lg font-bold">Interview Assistant</DialogTitle>
-                   <p className="text-xs text-gray-400">Listening... Press Alt to generate suggestions.</p>
+                   <p className="text-xs text-gray-400">Listening... Press Alt + G to generate suggestions.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <DialogClose asChild>
@@ -226,7 +226,7 @@ function InterviewModal({
                     ))
                 ) : (
                     <div className="text-gray-400 min-h-[100px] flex items-center justify-center text-center px-4">
-                        <p className="text-sm">Suggestions will appear here when you press Alt.</p>
+                        <p className="text-sm">Suggestions will appear here when you press Alt + G.</p>
                     </div>
                 )}
               </div>
@@ -389,5 +389,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
