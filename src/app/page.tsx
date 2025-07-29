@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,69 +35,7 @@ function InterviewModal({
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false; // Only listen for a single utterance
-      recognitionRef.current.interimResults = true;
-
-      recognitionRef.current.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-        setTranscript(finalTranscript || interimTranscript);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-        if (transcript.trim()) {
-            fetchSuggestions(transcript);
-        }
-      };
-      
-      recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error', event.error);
-        let description = `An unknown error occurred: ${event.error}`;
-        if (event.error === 'network') {
-          description = 'Could not connect to the speech recognition service. Please check your internet connection.';
-        } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          description = 'Microphone access was denied. Please enable microphone permissions in your browser settings.';
-        }
-        toast({ variant: 'destructive', title: 'Speech Recognition Error', description });
-        setIsListening(false);
-      };
-
-    } else {
-      toast({ variant: 'destructive', title: 'Unsupported Browser', description: 'Speech recognition is not supported in this browser.' });
-    }
-    
-    return () => {
-        if(recognitionRef.current) {
-            recognitionRef.current.stop();
-        }
-    }
-  }, [toast, transcript]); // Add transcript to dependency array
-  
-  const handleListen = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    } else {
-      setTranscript('');
-      setSuggestions([]);
-      recognitionRef.current?.start();
-      setIsListening(true);
-    }
-  };
-  
-  const fetchSuggestions = async (text: string) => {
+  const fetchSuggestions = useCallback(async (text: string) => {
       if(isLoading) return;
       setIsLoading(true);
       setSuggestions([]);
@@ -134,8 +72,85 @@ function InterviewModal({
       } finally {
           setIsLoading(false);
       }
-  }
+  }, [interviewContext, isLoading, toast]);
 
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false; // Only listen for a single utterance
+      recognitionRef.current.interimResults = true;
+
+      recognitionRef.current.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        setTranscript(finalTranscript || interimTranscript);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+        const finalTranscript = transcript.trim();
+        if (finalTranscript) {
+            fetchSuggestions(finalTranscript);
+        }
+      };
+      
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        let description = `An unknown error occurred: ${event.error}`;
+        if (event.error === 'network') {
+          description = 'Could not connect to the speech recognition service. Please check your internet connection.';
+        } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          description = 'Microphone access was denied. Please enable microphone permissions in your browser settings.';
+        }
+        toast({ variant: 'destructive', title: 'Speech Recognition Error', description });
+        setIsListening(false);
+      };
+
+    } else {
+      toast({ variant: 'destructive', title: 'Unsupported Browser', description: 'Speech recognition is not supported in this browser.' });
+    }
+    
+    return () => {
+        if(recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+    }
+  }, [toast, transcript, fetchSuggestions]);
+  
+  const handleListen = useCallback(() => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      setTranscript('');
+      setSuggestions([]);
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  }, [isListening]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey && event.code === 'Space') {
+        event.preventDefault();
+        handleListen();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleListen]);
+  
   const handleScreenAnalysis = async () => {
     if (isLoading) return;
     setIsLoading(true);
@@ -172,6 +187,8 @@ function InterviewModal({
         let description = 'Could not analyze the screen.';
         if (error.name === 'NotAllowedError' || error.message.includes('disallowed by permissions policy')) {
           description = 'Screen capture permission was denied. Please ensure you are on a secure (HTTPS) connection and have granted the necessary permissions.';
+        } else if (error.name === 'NotFoundError') {
+          description = 'No screen or window was selected to share.'
         }
         toast({ variant: 'destructive', title: 'Screen Analysis Error', description });
     } finally {
@@ -250,7 +267,7 @@ function InterviewModal({
                         ))
                     ) : (
                         <Card className="bg-white/10 border-white/20 text-white min-h-[120px] flex items-center justify-center">
-                            <p className="text-lg">{isListening ? 'Listening for objections...' : 'Tap "Listen" to start...'}</p>
+                            <p className="text-lg">{isListening ? 'Listening for objections...' : 'Press Alt + Space to start...'}</p>
                         </Card>
                     )}
                 </div>
