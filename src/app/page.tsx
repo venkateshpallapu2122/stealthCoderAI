@@ -224,76 +224,67 @@ function InterviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
-        <DialogContent className="bg-transparent border-none shadow-none max-w-4xl w-full p-0 data-[state=open]:animate-none data-[state=closed]:animate-none">
-            <div className="w-full flex flex-col gap-4">
-               <DialogHeader>
-                  <div className="flex justify-between items-center text-white pt-4 text-left">
-                    <div>
-                      <DialogTitle className="text-2xl font-bold">Live Objection Handling & Battlecards</DialogTitle>
-                      <DialogDescription className="text-sm text-gray-300">Cluely listens for objections and instantly surfaces the right responses, competitor comparisons, or rebuttals — no tab-switching needed.</DialogDescription>
-                    </div>
-                    <DialogClose asChild>
-                      <Button variant="ghost" size="icon" onClick={onClose}>
-                          <X />
-                      </Button>
-                    </DialogClose>
-                  </div>
-                </DialogHeader>
+        <DialogOverlay className="bg-transparent" />
+        <DialogContent className="bg-black/80 text-white border-white/20 shadow-lg max-w-md w-full p-4 top-4 translate-y-0 data-[state=open]:animate-none data-[state=closed]:animate-none flex flex-col max-h-[95vh]">
+            <DialogHeader className="flex-shrink-0">
+              <div className="flex justify-between items-center text-left">
+                <div>
+                  <DialogTitle className="text-lg font-bold">Interview Assistant</DialogTitle>
+                </div>
+                <DialogClose asChild>
+                  <Button variant="ghost" size="icon" onClick={onClose}>
+                      <X className="h-4 w-4" />
+                  </Button>
+                </DialogClose>
+              </div>
+            </DialogHeader>
 
-                <main className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2 space-y-4">
-                    {isLoading && suggestions.length === 0 ? (
-                        <Card className="bg-white/10 border-white/20 text-white min-h-[120px] flex items-center justify-center">
-                           <p className="text-lg">Generating...</p>
-                        </Card>
-                    ) : suggestions.length > 0 ? (
-                        suggestions.map((suggestion, index) => (
-                            <Card key={index} className="bg-white/10 border-white/20 text-white animate-in fade-in-0 duration-500">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    {getIconForType(suggestion.type)}
-                                    {getTitleForType(suggestion.type)}
-                                </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  {suggestion.type === 'code' ? (
-                                    <pre className="bg-black/50 p-4 rounded-md overflow-x-auto"><code className="text-sm">{suggestion.content}</code></pre>
-                                  ) : (
-                                    <p className="whitespace-pre-wrap">{suggestion.content}</p>
-                                  )}
-                                </CardContent>
-                            </Card>
-                        ))
-                    ) : (
-                        <Card className="bg-white/10 border-white/20 text-white min-h-[120px] flex items-center justify-center">
-                            <p className="text-lg">{isListening ? 'Listening for objections...' : 'Press Alt + Space to start...'}</p>
-                        </Card>
-                    )}
-                </div>
-                <div className="space-y-4 flex flex-col">
-                    <Card className="bg-white/10 border-white/20 text-white flex-1 flex flex-col">
-                        <CardHeader>
-                            <CardTitle>Live Transcript</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1 flex flex-col">
-                          <ScrollArea className="flex-1 h-32">
-                            <p className="text-xs">{transcript || "Waiting for you to speak..."}</p>
-                          </ScrollArea>
-                        </CardContent>
-                    </Card>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={handleListen} disabled={isLoading} size="lg" className={`w-full ${isListening ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
-                        {isListening ? <MicOff className="mr-2" /> : <Mic className="mr-2" />}
-                        {isListening ? 'Listening...' : 'Listen'}
-                      </Button>
-                      <Button onClick={handleScreenAnalysis} size="lg" variant="outline" disabled={isLoading}>
-                          <ScreenShare className="mr-2" />
-                          Analyze Screen
-                      </Button>
+            <ScrollArea className="flex-1 -mx-4">
+              <div className="px-4 space-y-2">
+                {isLoading && suggestions.length === 0 ? (
+                    <div className="text-white min-h-[100px] flex items-center justify-center">
+                       <p className="text-sm">Generating...</p>
                     </div>
+                ) : suggestions.length > 0 ? (
+                    suggestions.map((suggestion, index) => (
+                        <Card key={index} className="bg-white/10 border-none text-white animate-in fade-in-0 duration-500 text-sm">
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 pt-2 px-3">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                {getIconForType(suggestion.type)}
+                                {getTitleForType(suggestion.type)}
+                            </CardTitle>
+                            </CardHeader>
+                            <CardContent className="px-3 pb-3">
+                              {suggestion.type === 'code' ? (
+                                <pre className="bg-black/50 p-2 rounded-md overflow-x-auto"><code className="text-xs">{suggestion.content}</code></pre>
+                              ) : (
+                                <p className="whitespace-pre-wrap text-xs">{suggestion.content}</p>
+                              )}
+                            </CardContent>
+                        </Card>
+                    ))
+                ) : (
+                    <div className="text-gray-400 min-h-[100px] flex items-center justify-center text-center px-4">
+                        <p className="text-sm">{isListening ? 'Listening for objections...' : 'Press Alt + Space or click the Listen button to get suggestions.'}</p>
+                    </div>
+                )}
+              </div>
+            </ScrollArea>
+            
+            <div className="flex-shrink-0 space-y-2">
+                <ScrollArea className="h-20 rounded-md border border-white/20 p-2">
+                  <p className="text-xs text-gray-300">{transcript || "Live transcript will appear here..."}</p>
+                </ScrollArea>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={handleListen} disabled={isLoading} size="sm" className={`w-full ${isListening ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                    {isListening ? <MicOff className="mr-2" /> : <Mic className="mr-2" />}
+                    {isListening ? 'Listening...' : 'Listen'}
+                  </Button>
+                  <Button onClick={handleScreenAnalysis} size="sm" variant="outline" className="text-xs" disabled={isLoading}>
+                      <ScreenShare className="mr-2" />
+                      Analyze Screen
+                  </Button>
                 </div>
-                </main>
             </div>
         </DialogContent>
     </Dialog>
