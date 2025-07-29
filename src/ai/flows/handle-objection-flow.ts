@@ -26,9 +26,6 @@ const HandleObjectionOutputSchema = z.object({
 });
 export type HandleObjectionOutput = z.infer<typeof HandleObjectionOutputSchema>;
 
-export async function handleObjection(input: HandleObjectionInput): Promise<HandleObjectionOutput> {
-  return handleObjectionFlow(input);
-}
 
 const prompt = ai.definePrompt({
   name: 'handleObjectionPrompt',
@@ -62,3 +59,7 @@ const handleObjectionFlow = ai.defineFlow(
     return output!;
   }
 );
+
+export async function handleObjection(input: HandleObjectionInput): Promise<HandleObjectionOutput> {
+  return handleObjectionFlow(input);
+}
